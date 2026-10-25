@@ -128,6 +128,32 @@ uv sync --locked
 
 Keep `pyproject.toml`, `uv.lock` and `.python-version` with the project when publishing or sharing it. See the [official uv locking and syncing guide](https://docs.astral.sh/uv/concepts/projects/sync/) for how dependency synchronization works.
 
+#### GPU setup and verification
+
+On **64-bit x86 Windows and Linux**, `uv sync` installs **PyTorch 2.6.0 with CUDA 12.4** from the official PyTorch CUDA index. The source is recorded in `pyproject.toml` and `uv.lock`, so later `uv run` commands retain the CUDA build. Other platforms use the default PyTorch package source.
+
+To repair an older clone that installed a CPU-only build, update its project files from GitHub and run:
+
+```shell
+uv sync --locked
+uv run python run.py --check-device
+```
+
+If training or Streamlit is running from that environment, stop it with **Ctrl+C** before replacing PyTorch, then restart it after synchronization. On a supported NVIDIA GPU with a compatible driver, the check prints the GPU name, `Training device: cuda` and `CUDA forward/backward check: passed`. This command checks the device without downloading datasets or starting training.
+
+For the tested RTX 3050 setup, the output includes:
+
+```text
+PyTorch: 2.6.0+cu124
+CUDA runtime in PyTorch: 12.4
+Training device: cuda — NVIDIA GeForce RTX 3050 ...
+CUDA forward/backward check: passed
+```
+
+The CUDA wheel includes its runtime libraries; this setup does not require a separate CUDA Toolkit installation. A compatible **NVIDIA driver** and GPU are still required. `nvidia-smi` reports driver support; `torch.version.cuda` reports the runtime bundled with PyTorch, so their version numbers can differ. See the [official PyTorch 2.6.0 CUDA wheel instructions](https://pytorch.org/get-started/previous-versions/#v260) and [uv's PyTorch source configuration](https://docs.astral.sh/uv/guides/integration/pytorch/).
+
+The neural network automatically selects CUDA when available and otherwise uses CPU. Data preparation, plots and the proposed framework's XGBoost residual head run on CPU, so GPU use is intermittent. Reading cached results does not start GPU training. The change of PyTorch build can invalidate older training caches; the next normal launch will rebuild affected work.
+
 ### Step 5 — Run the complete project
 
 ```shell
@@ -179,6 +205,7 @@ uv run python run.py
 | Rebuild results without opening Streamlit | `uv run python run.py --update --prepare-only` |
 | Explicitly repeat validation seed selection | `uv run python run.py --reselect-seed` |
 | Run the tests | `uv run python -m pytest -q` |
+| Show the selected device and test GPU computation | `uv run python run.py --check-device` |
 
 `--update` rebuilds results with the same fixed defaults and frozen model seed; previous run folders are preserved. Changes to training code, dataset content or numerical-library versions can also invalidate the relevant training cache. Ordinary launches keep the frozen seed.
 
@@ -280,6 +307,9 @@ Scores come from the selected run or supplied outcomes, not hardcoded values. A 
 | Setup changes cause an out-of-date lockfile error | For an unchanged checkout, obtain its matching `pyproject.toml` and `uv.lock`. If you intentionally edited dependencies, run `uv sync` to update the lock. |
 | The browser does not open, or 8501 shows another app | Open the exact URL printed by this project's launcher; it may use another port such as 8502. |
 | The first launch is still training | Keep the terminal open and check its progress. First preparation can be slow on CPU; subsequent valid runs use the cache. |
+| An NVIDIA GPU is present but training uses CPU | Run `uv run python run.py --check-device`. If PyTorch has no CUDA runtime, update the checkout and run `uv sync --locked` after stopping its running Python processes. Check that the source and lockfile contain the CUDA wheel. |
+| CUDA is installed but the GPU check fails | Check `nvidia-smi` and the NVIDIA driver. The default CUDA 12.4 build must support your GPU; errors from the computation check should be resolved before full training. |
+| GPU utilization falls to zero during a run | Data preparation, XGBoost correction, charts and cached-result viewing use CPU. GPU utilization should rise during the neural training batches, rather than stay high throughout the whole workflow. |
 | A cached run is incomplete or fails its integrity check | Run `uv run python run.py` to let preparation repair missing work. Use `--update` when you intentionally want a rebuild. |
 | CSV measurements or labels are rejected | Use the selected model's template. Supply numeric clinical values, unique patient / visit pairs and valid Yes/No outcomes; leave unknown values blank. |
 | AUROC or other scores are blank | Supply actual outcomes. AUROC requires both Yes and No labels; recognized training / validation patients are excluded from summary scores by default. |
