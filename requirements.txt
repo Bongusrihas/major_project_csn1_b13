@@ -1,0 +1,15 @@
+# Tested with Python 3.13 on Linux. Python 3.10 - 3.12 is recommended on Windows.
+pandas>=2.2
+numpy>=1.26
+scikit-learn>=1.4
+xgboost>=2.0
+streamlit>=1.50
+plotly>=5.20
+matplotlib>=3.8
+joblib>=1.3
+scipy>=1.11
+torch>=2.3        # Stage II causal model (CPU is enough). If pip cannot find torch for your Python, use Python 3.12
+pytest>=8.0
+filelock>=3.13
+pymupdf>=1.24,<3
+psutil>=5.9

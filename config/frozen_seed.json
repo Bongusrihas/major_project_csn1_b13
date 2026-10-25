@@ -1,0 +1,463 @@
+{
+  "selected_seed": 73,
+  "split_seed": 42,
+  "epochs": 30,
+  "selection": "Proposed validation AUROC; ties: AUPRC, Brier, severity MAE",
+  "test_used_for_selection": false,
+  "source_signature": "0f57ba7aaf4861a31b6d45be373894b6a70e67f24ddcdb981c1ebbfaad5204c8",
+  "selected_at": 1792930574.3814027,
+  "trials": [
+    {
+      "seed": 7,
+      "validation_metrics": {
+        "paper": {
+          "auroc": 0.5627,
+          "auprc": 0.1992,
+          "f1": 0.2963,
+          "mae": 0.579,
+          "rmse": 0.694,
+          "ece": 0.006,
+          "brier": 0.1309
+        },
+        "improved": {
+          "auroc": 0.5793,
+          "auprc": 0.2383,
+          "f1": 0.2804,
+          "mae": 0.451,
+          "rmse": 0.564,
+          "ece": 0.0089,
+          "brier": 0.1306
+        }
+      },
+      "correction": {
+        "flare_strength": 1.0,
+        "severity_strength": 1.0,
+        "classifier_trees": 7,
+        "severity_trees": 56,
+        "selected_flare_configuration": 0,
+        "selected_severity_configuration": 2,
+        "configuration_search": [
+          {
+            "configuration": 0,
+            "max_depth": 2,
+            "min_child_weight": 12,
+            "reg_lambda": 20.0,
+            "balanced": false,
+            "validation_auroc": 0.5792838874680307,
+            "validation_auprc": 0.23830160308673132,
+            "validation_mae": 0.47345685958862305
+          },
+          {
+            "configuration": 1,
+            "max_depth": 3,
+            "min_child_weight": 8,
+            "reg_lambda": 10.0,
+            "balanced": false,
+            "validation_auroc": 0.5773657289002557,
+            "validation_auprc": 0.23701673436849446,
+            "validation_mae": 0.4564570188522339
+          },
+          {
+            "configuration": 2,
+            "max_depth": 4,
+            "min_child_weight": 8,
+            "reg_lambda": 15.0,
+            "balanced": true,
+            "validation_auroc": 0.5658567774936062,
+            "validation_auprc": 0.24620424941467356,
+            "validation_mae": 0.451241672039032
+          }
+        ]
+      }
+    },
+    {
+      "seed": 21,
+      "validation_metrics": {
+        "paper": {
+          "auroc": 0.5786,
+          "auprc": 0.2993,
+          "f1": 0.2857,
+          "mae": 0.614,
+          "rmse": 0.697,
+          "ece": 0.0234,
+          "brier": 0.1278
+        },
+        "improved": {
+          "auroc": 0.7136,
+          "auprc": 0.3296,
+          "f1": 0.4706,
+          "mae": 0.432,
+          "rmse": 0.578,
+          "ece": 0.0434,
+          "brier": 0.1232
+        }
+      },
+      "correction": {
+        "flare_strength": 1.0,
+        "severity_strength": 1.0,
+        "classifier_trees": 85,
+        "severity_trees": 288,
+        "selected_flare_configuration": 2,
+        "selected_severity_configuration": 0,
+        "configuration_search": [
+          {
+            "configuration": 0,
+            "max_depth": 2,
+            "min_child_weight": 12,
+            "reg_lambda": 20.0,
+            "balanced": false,
+            "validation_auroc": 0.6924552429667519,
+            "validation_auprc": 0.45609154825794607,
+            "validation_mae": 0.43171414732933044
+          },
+          {
+            "configuration": 1,
+            "max_depth": 3,
+            "min_child_weight": 8,
+            "reg_lambda": 10.0,
+            "balanced": false,
+            "validation_auroc": 0.6873401534526855,
+            "validation_auprc": 0.4515026367374414,
+            "validation_mae": 0.4422760009765625
+          },
+          {
+            "configuration": 2,
+            "max_depth": 4,
+            "min_child_weight": 8,
+            "reg_lambda": 15.0,
+            "balanced": true,
+            "validation_auroc": 0.7135549872122763,
+            "validation_auprc": 0.3296337490846836,
+            "validation_mae": 0.4483732283115387
+          }
+        ]
+      }
+    },
+    {
+      "seed": 42,
+      "validation_metrics": {
+        "paper": {
+          "auroc": 0.6292,
+          "auprc": 0.2461,
+          "f1": 0.338,
+          "mae": 0.626,
+          "rmse": 0.708,
+          "ece": 0.033,
+          "brier": 0.1279
+        },
+        "improved": {
+          "auroc": 0.6797,
+          "auprc": 0.2801,
+          "f1": 0.3721,
+          "mae": 0.433,
+          "rmse": 0.572,
+          "ece": 0.0385,
+          "brier": 0.1253
+        }
+      },
+      "correction": {
+        "flare_strength": 1.0,
+        "severity_strength": 1.0,
+        "classifier_trees": 52,
+        "severity_trees": 93,
+        "selected_flare_configuration": 2,
+        "selected_severity_configuration": 2,
+        "configuration_search": [
+          {
+            "configuration": 0,
+            "max_depth": 2,
+            "min_child_weight": 12,
+            "reg_lambda": 20.0,
+            "balanced": false,
+            "validation_auroc": 0.6560102301790282,
+            "validation_auprc": 0.3130833140120604,
+            "validation_mae": 0.47420161962509155
+          },
+          {
+            "configuration": 1,
+            "max_depth": 3,
+            "min_child_weight": 8,
+            "reg_lambda": 10.0,
+            "balanced": false,
+            "validation_auroc": 0.6470588235294117,
+            "validation_auprc": 0.30868834126835704,
+            "validation_mae": 0.4710569381713867
+          },
+          {
+            "configuration": 2,
+            "max_depth": 4,
+            "min_child_weight": 8,
+            "reg_lambda": 15.0,
+            "balanced": true,
+            "validation_auroc": 0.6796675191815856,
+            "validation_auprc": 0.2800987050310312,
+            "validation_mae": 0.4331095516681671
+          }
+        ]
+      }
+    },
+    {
+      "seed": 73,
+      "validation_metrics": {
+        "paper": {
+          "auroc": 0.6164,
+          "auprc": 0.2324,
+          "f1": 0.3288,
+          "mae": 0.614,
+          "rmse": 0.694,
+          "ece": 0.0099,
+          "brier": 0.1301
+        },
+        "improved": {
+          "auroc": 0.727,
+          "auprc": 0.3281,
+          "f1": 0.4,
+          "mae": 0.452,
+          "rmse": 0.568,
+          "ece": 0.0228,
+          "brier": 0.1259
+        }
+      },
+      "correction": {
+        "flare_strength": 0.75,
+        "severity_strength": 1.0,
+        "classifier_trees": 73,
+        "severity_trees": 49,
+        "selected_flare_configuration": 2,
+        "selected_severity_configuration": 2,
+        "configuration_search": [
+          {
+            "configuration": 0,
+            "max_depth": 2,
+            "min_child_weight": 12,
+            "reg_lambda": 20.0,
+            "balanced": false,
+            "validation_auroc": 0.6892583120204603,
+            "validation_auprc": 0.30692645030906596,
+            "validation_mae": 0.45684126019477844
+          },
+          {
+            "configuration": 1,
+            "max_depth": 3,
+            "min_child_weight": 8,
+            "reg_lambda": 10.0,
+            "balanced": false,
+            "validation_auroc": 0.6962915601023018,
+            "validation_auprc": 0.3379800599847177,
+            "validation_mae": 0.46642443537712097
+          },
+          {
+            "configuration": 2,
+            "max_depth": 4,
+            "min_child_weight": 8,
+            "reg_lambda": 15.0,
+            "balanced": true,
+            "validation_auroc": 0.7269820971867007,
+            "validation_auprc": 0.3281290833706944,
+            "validation_mae": 0.4523783326148987
+          }
+        ]
+      }
+    },
+    {
+      "seed": 123,
+      "validation_metrics": {
+        "paper": {
+          "auroc": 0.5473,
+          "auprc": 0.2052,
+          "f1": 0.303,
+          "mae": 0.631,
+          "rmse": 0.708,
+          "ece": 0.0196,
+          "brier": 0.1312
+        },
+        "improved": {
+          "auroc": 0.7033,
+          "auprc": 0.3087,
+          "f1": 0.381,
+          "mae": 0.447,
+          "rmse": 0.578,
+          "ece": 0.0194,
+          "brier": 0.1254
+        }
+      },
+      "correction": {
+        "flare_strength": 1.0,
+        "severity_strength": 1.0,
+        "classifier_trees": 90,
+        "severity_trees": 66,
+        "selected_flare_configuration": 2,
+        "selected_severity_configuration": 1,
+        "configuration_search": [
+          {
+            "configuration": 0,
+            "max_depth": 2,
+            "min_child_weight": 12,
+            "reg_lambda": 20.0,
+            "balanced": false,
+            "validation_auroc": 0.6457800511508951,
+            "validation_auprc": 0.37381892847829984,
+            "validation_mae": 0.45787513256073
+          },
+          {
+            "configuration": 1,
+            "max_depth": 3,
+            "min_child_weight": 8,
+            "reg_lambda": 10.0,
+            "balanced": false,
+            "validation_auroc": 0.6662404092071611,
+            "validation_auprc": 0.34995527190172493,
+            "validation_mae": 0.4473460018634796
+          },
+          {
+            "configuration": 2,
+            "max_depth": 4,
+            "min_child_weight": 8,
+            "reg_lambda": 15.0,
+            "balanced": true,
+            "validation_auroc": 0.7033248081841432,
+            "validation_auprc": 0.3086762492330488,
+            "validation_mae": 0.44960397481918335
+          }
+        ]
+      }
+    }
+  ],
+  "train_patient_ids": [
+    "SLE-31",
+    "SLE-334",
+    "SLE-133",
+    "SLE-83",
+    "SLE-325",
+    "SLE-179",
+    "SLE-129",
+    "SLE-269",
+    "SLE-192",
+    "SLE-175",
+    "SLE-335",
+    "SLE-268",
+    "SLE-336",
+    "SLE-18",
+    "SLE-197",
+    "SLE-323",
+    "SLE-154",
+    "SLE-132",
+    "SLE-89",
+    "SLE-277",
+    "SLE-201",
+    "SLE-345",
+    "SLE-312",
+    "SLE-339",
+    "SLE-233",
+    "SLE-160",
+    "SLE-224",
+    "SLE-161",
+    "SLE-121",
+    "SLE-316",
+    "SLE-210",
+    "SLE-189",
+    "SLE-327",
+    "SLE-123",
+    "SLE-308",
+    "SLE-114",
+    "SLE-79",
+    "SLE-320",
+    "SLE-78",
+    "SLE-321",
+    "SLE-95",
+    "SLE-138",
+    "SLE-266",
+    "SLE-338",
+    "SLE-255",
+    "SLE-105",
+    "SLE-296",
+    "SLE-267",
+    "SLE-166",
+    "SLE-249",
+    "SLE-194",
+    "SLE-293",
+    "SLE-20",
+    "SLE-214",
+    "SLE-73",
+    "SLE-141",
+    "SLE-218",
+    "SLE-305",
+    "SLE-168",
+    "SLE-347",
+    "SLE-125",
+    "SLE-348",
+    "SLE-242",
+    "SLE-337",
+    "SLE-99",
+    "SLE-245",
+    "SLE-279",
+    "SLE-264",
+    "SLE-342",
+    "SLE-281",
+    "SLE-188",
+    "SLE-150",
+    "SLE-271",
+    "SLE-229",
+    "SLE-80",
+    "SLE-230",
+    "SLE-241",
+    "SLE-155",
+    "SLE-324",
+    "SLE-207",
+    "SLE-213",
+    "SLE-256",
+    "SLE-225",
+    "SLE-332",
+    "SLE-34",
+    "SLE-163",
+    "SLE-260",
+    "SLE-40",
+    "SLE-65",
+    "SLE-231",
+    "SLE-134",
+    "SLE-304",
+    "SLE-169",
+    "SLE-211",
+    "SLE-200",
+    "SLE-313",
+    "SLE-183",
+    "SLE-147",
+    "SLE-180",
+    "SLE-55",
+    "SLE-199",
+    "SLE-234",
+    "SLE-331",
+    "SLE-181",
+    "SLE-244",
+    "SLE-219",
+    "SLE-340",
+    "SLE-110",
+    "SLE-343"
+  ],
+  "validation_patient_ids": [
+    "SLE-311",
+    "SLE-326",
+    "SLE-216",
+    "SLE-136",
+    "SLE-87",
+    "SLE-254",
+    "SLE-252",
+    "SLE-184",
+    "SLE-344",
+    "SLE-172",
+    "SLE-21",
+    "SLE-202",
+    "SLE-333",
+    "SLE-158",
+    "SLE-90",
+    "SLE-341",
+    "SLE-143",
+    "SLE-190",
+    "SLE-328",
+    "SLE-209",
+    "SLE-317",
+    "SLE-171",
+    "SLE-144",
+    "SLE-187"
+  ]
+}

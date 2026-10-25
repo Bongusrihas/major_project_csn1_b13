@@ -1,0 +1,98 @@
+# Local datasets, trained models, reports and tests (project-root folders only)
+/data/
+/models/
+/reports/
+/tests/
+
+# Other generated experiment outputs
+/results/
+/outputs/
+/artifacts/
+/checkpoints/
+/runs/
+/lightning_logs/
+/wandb/
+/mlruns/
+/extracted_paper_text.txt
+
+# Python bytecode and packaging artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+/build/
+/dist/
+/wheels/
+.eggs/
+*.egg-info/
+*.egg
+pip-wheel-metadata/
+
+# Virtual environments and dependency caches
+.venv/
+.venv-*/
+venv/
+env/
+ENV/
+__pypackages__/
+.uv-cache/
+.cache/
+
+# Test, lint, type-checking and coverage output
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyre/
+.pytype/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+coverage.json
+htmlcov/
+
+# Saved model artifacts outside the result folders
+*.pt
+*.pth
+*.ckpt
+*.joblib
+*.pkl
+*.pickle
+*.onnx
+*.safetensors
+
+# Logs, temporary downloads and backup files
+*.log
+*.tmp
+*.temp
+*.partial
+*.bak
+*~
+/tmp/
+/temp/
+
+# Local environment variables and Streamlit secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+.streamlit/secrets.toml
+
+# Editor and notebook state
+/.idea/
+/.vscode/
+.ipynb_checkpoints/
+*.swp
+*.swo
+
+# Operating-system metadata
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+
+# Keep shared configuration, documentation and dependency lockfiles tracked.
+# In particular: src/models/, .streamlit/config.toml, config/frozen_seed.json,
+# pyproject.toml, .python-version and uv.lock are not ignored.

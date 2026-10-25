@@ -1,0 +1,78 @@
+{
+  "title": "Causal Representation Learning for Predicting Autoimmune Disease Progression From Longitudinal Multimodal Clinical Data",
+  "authors": "Harshit Sharma and Simran Kaur",
+  "journal": "IEEE Access 13, 150010\u2013150027 (2025)",
+  "doi": "https://doi.org/10.1109/ACCESS.2025.3598276",
+  "license": "CC BY 4.0",
+  "cohort_patients": 2000,
+  "visit_instances_approx": 33100,
+  "features": 54,
+  "ece": 0.032,
+  "tables": [
+    {
+      "Model": "LSTM",
+      "AUROC": 0.782,
+      "AUPRC": 0.635,
+      "F1": 0.61,
+      "MAE": 0.89,
+      "RMSE": 1.11
+    },
+    {
+      "Model": "Transformer",
+      "AUROC": 0.804,
+      "AUPRC": 0.66,
+      "F1": 0.631,
+      "MAE": 0.85,
+      "RMSE": 1.05
+    },
+    {
+      "Model": "Variational RNN",
+      "AUROC": 0.82,
+      "AUPRC": 0.676,
+      "F1": 0.648,
+      "MAE": 0.83,
+      "RMSE": 1.01
+    },
+    {
+      "Model": "Paper framework",
+      "AUROC": 0.867,
+      "AUPRC": 0.726,
+      "F1": 0.702,
+      "MAE": 0.74,
+      "RMSE": 0.95
+    }
+  ],
+  "clinical_table": [
+    {
+      "Model": "SLEDAI",
+      "AUROC": 0.752,
+      "AUPRC": 0.598,
+      "F1": 0.58,
+      "MAE": 1.15
+    },
+    {
+      "Model": "DAS28",
+      "AUROC": 0.764,
+      "AUPRC": 0.61,
+      "F1": 0.595,
+      "MAE": 1.1
+    },
+    {
+      "Model": "Paper framework",
+      "AUROC": 0.867,
+      "AUPRC": 0.726,
+      "F1": 0.702,
+      "MAE": 0.74
+    }
+  ],
+  "figures": {
+    "fig6": "Latent causal and spurious representations",
+    "fig7": "Uncertainty heatmap",
+    "fig8": "DMARD-withdrawal counterfactual",
+    "fig9": "Subgroup ROC curves",
+    "fig10": "Temporal feature attention",
+    "fig11": "t-SNE by flare outcome",
+    "fig12": "Uncertainty over time",
+    "fig13": "Component ablations"
+  }
+}
