@@ -1,0 +1,5 @@
+# Preserve generated document/image bytes; Windows newline conversion breaks PDFs.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary

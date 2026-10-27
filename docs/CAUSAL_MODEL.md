@@ -1,88 +1,138 @@
-# Stage II - Causal representation model (what is built, what is simplified, what the numbers say)
+# Architecture: Paper framework and Proposed framework
 
-Code: `src/causal/` · Page in the app: `app/pages/1_Causal_model.py` · Reports: `reports/causal/`
-Run: `python -m src.causal.run_synthetic` (≈1 h on 2 CPUs; `--fast` for a 10-minute check) and `python -m src.causal.run_real`.
+This describes the **active code path**, replacing the earlier Stage II / LECG account. See [Methodology](METHODOLOGY.md) for the publication and [Measured results](MEASURED_RESULTS.md) for scores.
 
-## 1. Why there are two datasets
-* **Real:** GSE65391 SLE cohort - 157 patients, 766 usable next-visit steps. Real, but **far too small for a deep model**,
-  and nobody observed what *would have happened* under a different treatment, so counterfactuals cannot be verified.
-* **SYNTHETIC (simulated):** `src/causal/synthetic.py`. 2,000 simulated SLE+RA patients (~16 visits) generated from a structural
-  causal model with a **hidden immune state**, known treatment effects, confounding by indication (doctors treat the sicker),
-  informative missingness and site effects. Because the true mechanism is known, we can compute the **true** effect of a
-  treatment change and test whether the model finds it. **No synthetic number is a statement about real patients.**
+## 1. The two architectures
 
-## 2. Components: implemented / simplified / not implemented
-| Paper component | Status | What the code does (file) |
+Paper is our local adaptation of Sharma and Kaur's framework. Proposed shares its fitted network and adds Temporal Residual Boosting (TRB). Each paired run has one neural checkpoint and one correction artifact.
+
+```text
+Available visits: normalized values X, observation masks M, transformed gaps g
+                                |
+Fixed typed graph -> 2-layer R-GCN, node width 32 + direct [X,M] skip
+                                |
+          visit code [z_c:32 | z_s:16]  (z_s -> nuisance objective)
+                                |
+                 z_c -> MRTF: windows 1 / 3 / 6 visits
+                                |
+                 2-layer, 4-head TCT -> h_t:64
+                                |
+       treatment-action path + noise posterior:16 -> shared trunk:64
+                                |
+          flare logit + 3-component severity mixture
+                                |
+         deterministic inference / validation Platt calibration
+                                |
+                                +------> PAPER OUTPUT
+                                |
+h_t + past-only history summaries + Paper margin / severity starting point
+                                |
+           TRB classifier + severity-residual regressor
+                                |
+   validation-selected strengths; corrected severity clipped to [0,4]
+                                |
+                                +------> PROPOSED OUTPUT
+```
+
+CDI and other auxiliary losses act during neural training. The intended causal / nuisance names are modeling objectives, not proof of identified clinical causes.
+
+## 2. Dimensions and source files
+
+`B` = patients per batch; `T` = padded visits; `V` = input variables. Public data use `V=29`, main simulation `V=52`, random cohorts `V=18`.
+
+| Block | Shape / configuration | Implementation |
 |---|---|---|
-| Causal graph `G = λ·G_prior + (1-λ)·G_stat` (Eq. 4) | **Simplified** | Curated pharmacology prior + latent-aware *partial-correlation* test (not full PC/HSIC); treatment edges kept only where both agree; a learned latent node for hidden immune state (`graph.py`, `pipeline.py`). Graph is a verified DAG. |
-| R-GCN structural encoder (Eq. 6) | **Implemented** | 14 relation types (7 + inverses), dense message passing, 2 layers, plus a graph-free skip path (`model.py: RGCN, StructuralEncoder`). Graph is *within-visit*; time is handled by the temporal part. |
-| MRTF multi-resolution fusion (Eqs. 13-15) | **Simplified** | Gated fusion of causal moving averages over the last 1, 3 and 6 **visits** (not daily/weekly/monthly windows). |
-| Temporal Causal Transformer + intervention gating (Eqs. 10-12) | **Implemented (time-causal)** | Self-attention that sees only past visits; gate `g = σ(W_Δ·Δt + W_a·a_t + b)`. Mask is time-causal, not a learned DAG mask. Unit-tested that the future cannot leak (`tests/test_causal.py`). |
-| Counterfactual Simulation Engine (Eqs. 7-9, 29) | **Simplified** | Abduction (posterior noise ε from history, damped), action (overwrite treatment nodes at visit t + direct action pathway), prediction (same ε). Consistency loss is a weak regulariser (sampled-ε vs mean-ε agreement). |
-| Disentanglement + invariance CDI (Eqs. 16-19) | **Simplified** | Latent split `[z_causal, z_spurious]`; HSIC(z_causal, nuisance) and MMD across subgroups on minibatches; z_spurious must encode the nuisance. |
-| ELBO / total correlation (Eqs. 27-28) | **Simplified** | Reconstruction + β·KL (β=2); the exact total-correlation estimator is *not* implemented. |
-| Uncertainty: MC dropout + mixture-of-Gaussians (Eqs. 20-24) | **Implemented** | 30-40 MC-dropout passes (epistemic) + 2-component Gaussian mixture for severity (aleatoric); Platt-calibrated flare probability. |
-| Focal loss, contrastive loss (Eqs. 30-31) | **Implemented** (contrastive is a small supervised-contrastive term, weight 0.02) | `model.py`. |
-| Integrated gradients, attention maps (Eq. 26) | **Implemented** | `train.py`, shown in the app. |
-| Multimodal imaging / text / genomics inputs | **Not implemented** | Only tabular labs, symptom flags and treatments. |
+| Values / masks | `B x T x V` | `src/causal/dataset.py` |
+| Gap / padding mask | `B x T`; gap = `log1p(days/30)` | dataset loaders / `to_torch_batch()` |
+| Relation graph | `14 x (V+1) x (V+1)`, including latent node | `src/causal/graph.py` |
+| R-GCN | Width 32, two layers | `src/encoders/rgcn_original.py` |
+| Visit latent | `B x T x 48`, split into 32 + 16 | structural encoder |
+| MRTF | `B x T x 64`, windows 1 / 3 / 6 | `src/temporal/mrtf.py` |
+| TCT | Width 64, two layers, four heads, dropout 0.15 | `src/temporal/tct.py` |
+| Noise posterior | 16 means and log-variances | `src/models/causal_deep_model.py` |
+| Prediction trunk | Width 64 | `CausalDeepModel` |
+| Flare | One logit per visit | `flare_head` |
+| Severity | Three weights, means and log scales | `sev_head` |
+| TRB input | `9V + 65`: 326 / 533 / 227 by cohort | `src/project/improvement.py` |
 
-Targets: next-visit **flare** (SLEDAI rise ≥ 4 on real data; simulator definition on synthetic) and **severity 0-4**.
+TCT positional embeddings support 128 visits; upload validation enforces that limit. Padding masks handle variable histories. The last visit remains a valid inference input even when its future target is unknown.
 
-## 3. Results - SYNTHETIC cohort (test = 300 held-out simulated patients, never used for training)
-Reference: even an oracle that knows the true hidden state reaches AUROC **0.774**.
+## 3. Shared neural blocks
 
-| Model | Flare AUROC | AUPRC | Severity MAE |
-|---|---|---|---|
-| **Full causal model** (3 seeds) | **0.737 ± 0.003** | 0.283 | 0.600 |
-| GRU baseline (3 seeds) | 0.711 ± 0.025 | 0.259 | 0.607 |
-| Transformer (no graph/gate/CSE/CDI) | 0.686 | 0.226 | 0.589 |
-| XGBoost with lag features | 0.741 | - | - |
-| Ablation: w/o graph encoder | 0.713 | 0.257 | 0.615 |
-| Ablation: w/o CSE | 0.739 | 0.284 | 0.601 |
-| Ablation: w/o CDI | 0.722 | 0.262 | 0.597 |
-| Ablation: w/o intervention gate | 0.734 | 0.287 | 0.594 |
-| Ablation: w/o mixture head | 0.742 | 0.284 | 0.614 |
+### Fixed graph and R-GCN
 
-Honest reading: the full model is on par with XGBoost and better than the GRU/Transformer baselines, but **single-seed ablation
-differences of ≈0.01-0.03 AUROC are within seed noise** (GRU alone varies ±0.025), so these ablations do **not** prove that
-each component helps for prediction. Calibration is good (ECE ≈ 0.01); 90% severity intervals cover ≈ 92% (target 90%).
+`pair.build_graph()` combines a clinical prior and training-only statistical graph with prior weight `0.6` and threshold `0.35`. Normalized relation channels contain seven forward types plus reverse message types. The relation graph is fixed during neural fitting.
 
-### Counterfactual check against the simulator's TRUE effects (the central test)
-| What-if | True mean effect on next-visit flare risk | Model (full) corr / sign-acc | GRU | XGBoost S-learner |
-|---|---|---|---|---|
-| Stop steroids (n=1500 points) | +9.9 pts | mean +5.7 pts, corr **0.66**, sign 92% | 0.47, 79% | **0.71**, 99% |
-| Stop DMARD + biologic | +4.8 pts | mean +7.7 pts, corr **0.40**, sign 95% | 0.29, 92% | 0.37, 97% |
+Measurements are embedded with their scaled value, observation mask and node identity. Two layers mix neighbors through relation-specific weights. Attention pooling over observed-variable nodes and a latent-node readout form the graph representation. A direct `[X,M]` skip path is added before projection to 48 dimensions.
 
-Reading: the model recovers the *direction* and gives a useful ranking of who is most affected, but it **under-estimates
-the steroid effect (5.7 vs 9.9 pts) and over-estimates the DMARD/biologic effect**, and a plain XGBoost with the same inputs
-does about as well. We therefore do **not** claim that the causal architecture beats simple baselines at what-if estimation.
-Graph recovery of treatment→biomarker edges: prior alone P 0.70 / R 0.88; statistics alone P 0.44 / R 1.00;
-fused P 1.00 / R 0.88 (7 of 8 true edges).
+Reverse messages and the skip path make this a graph-informed predictor, not proof that every learned dependency follows an identified clinical causal pathway.
 
-### How we got here (transparency)
-First complete run (`synthetic_metrics_v1_before_action_path.json`): the full model was the **worst** at what-if estimates
-(corr 0.05) and AUROC 0.68. Cause: noise injection plus no direct treatment pathway. We added the action pathway and damped the
-noise, retrained, and reran everything. **That design change was chosen after looking at test-set counterfactual results**, so
-the test numbers above are mildly optimistic; baselines were not re-tuned. A cleaner protocol would pick the change on a
-separate validation simulation.
+### CDI, MRTF and TCT
 
-## 4. Results - REAL SLE cohort (5-fold patient-grouped CV, one seed)
-| Model | Flare AUROC (pooled out-of-fold, 95% patient-bootstrap CI) | Fold mean ± SD | Severity MAE |
-|---|---|---|---|
-| Causal model (small config) | 0.533 (0.48-0.59) | 0.54 ± 0.06 | 0.58 |
-| GRU | 0.491 (0.42-0.56) | 0.48 ± 0.08 | 0.60 |
-| Causal w/o graph | 0.511 (0.46-0.55) | 0.52 ± 0.06 | 0.64 |
-| Logistic regression (flat lag features) | 0.600 (0.55-0.65) | 0.61 ± 0.04 | - |
-| Stage I ensemble (out-of-bag, different protocol) | 0.628 | - | - |
-| Predict-the-mean severity | - | - | 0.79 |
+The visit code splits into `z_c` (32) and `z_s` (16). Training penalizes dependence between `z_c` and nuisance covariates, subgroup distribution differences, and failure of `z_s` to encode nuisance values. The predictive temporal path uses `z_c`.
 
-**On real data the deep causal model does not predict flares better than chance (CI includes 0.5) and is worse than the Stage I
-classical models.** With 157 patients this is expected; it is not evidence that the idea fails, only that this dataset cannot
-support it. Severity prediction beats the trivial baseline (0.58 vs 0.79), mostly because severity is persistent between visits.
-The what-if tab on real patients is a demonstration of the mechanism only.
+MRTF computes causal rolling means over 1 / 3 / 6 visits, projects them to width 64 and uses sigmoid fusion gates. The TCT adds position and gap embeddings, applies past-only attention with padding masks, and uses treatment / gap gating to interpolate new and previous representations. Its output `h_t` is the representation supplied to TRB.
 
-## 5. What you may claim / must not claim
-May claim: the paper's architecture was implemented end-to-end (with listed simplifications); it was validated on a simulator with
-known ground truth; it gives calibrated risks and uncertainty; honest comparison shows parity with strong baselines.
-Must not claim: better than the paper or than XGBoost; accurate on real patients; clinically valid counterfactuals; that
-synthetic results describe real patients; that ablations prove component value.
+### Noise / action path and heads
+
+Training samples a damped Gaussian latent noise value; deterministic inference uses the posterior mean. A treatment-action projection is added to `h_t`, concatenated with the noise code and passed through a shared trunk.
+
+Flare uses a logit. Severity uses a three-component Gaussian mixture; the point estimate is `sum_k pi_k * mu_k`, not an integer category. Current paired scores use deterministic inference and validation-fitted Platt scaling, not MC-dropout samples.
+
+## 4. Actual local training loss
+
+`src/causal/train.py::compute_composite_loss()` combines:
+
+```text
+L = L_reconstruction + 0.3 * L_severity_NLL + 0.01 * L_noise_KL
+    + 1.0 * L_focal + 0.8 * L_factual_noise_consistency
+    + 0.1 * L_correlation + 0.05 * L_contrastive + 0.5 * L_CDI
+```
+
+Terms depend on enabled modules. CDI combines HSIC, `0.2 * MMD` and `0.1 * nuisance-MSE`. CDI and contrastive calculations require enough valid visits and use at most 256 sampled training points; validation uses a deterministic subset.
+
+Reconstruction targets next observed scaled measurements under their masks. TC uses squared off-diagonal latent correlations instead of full KL total correlation. The consistency approximation compares factual sampled-noise and mean-noise predictions rather than verified alternative treatment effects.
+
+Adam uses learning rate and weight decay `1e-4`, gradient clipping at norm 2, maximum 30 epochs and patience six. The best validation-loss weights are restored before calibration / correction fitting.
+
+## 5. The added Proposed stage
+
+[`TemporalResidualBoosting`](../src/project/improvement.py) combines nine past-only groups per variable with `h_t` and time gaps. [Methodology, section 4](METHODOLOGY.md#4-the-new-implementation-temporal-residual-boosting) defines each group and the equations.
+
+The calibrated Paper probability supplies the classifier base margin. Raw Paper severity supplies the regression residual starting point. These are two task heads inside **one Proposed framework**, fitted after the neural weights freeze; gradients do not return through the trees.
+
+Classification blends margins, not probabilities. Severity adds a residual and clips to [0,4]. Validation chooses zero or nonzero strengths and may select different settings per task. Selected strengths, tree counts and configurations appear in [Measured results](MEASURED_RESULTS.md).
+
+Neural attention / integrated gradients and mixture variance describe the backbone. The project has not established complete attribution or uncertainty coverage for the combined neural / tree predictor.
+
+## 6. Differences from the publication
+
+| Topic | Publication | Active local implementation |
+|---|---|---|
+| Clinical data | Authors' SLE / RA cohort, 2,000 patients, 54 features. | Public pediatric SLE plus generated cohorts; original records unavailable. |
+| Preprocessing | GRU-D / alignment in III.A; carry-forward / domain imputation and patient min-max in IV.A. | Recorded gaps, training-fitted transforms, masks. |
+| Discovery | Prior plus PC / kernel independence tests. | Prior plus partial-correlation constraints on training measurements. |
+| Attention | DAG-path / temporal admissibility. | Lower-triangular temporal and padding masks; no full DAG-path mask. |
+| MRTF | Several temporal resolutions. | Last 1 / 3 / 6 visits. |
+| Causal objectives | Variational, counterfactual and invariance objectives. | Explicit approximations above, evaluated predictively. |
+| Uncertainty | MC dropout and Gaussian mixture. | Mixture retained; paired scores are deterministic. |
+| Our extension | TRB is not described. | One added history-aware correction stage. |
+
+Source: [supplied PDF](paper/reference.pdf), III.C-L and Algorithm 1. These distinctions prevent a paper-inspired implementation from being mistaken for the authors' exact released model.
+
+## 7. Code and artifacts
+
+| Responsibility | Source |
+|---|---|
+| Paired training and evaluation | [`pair.py`](../src/project/pair.py) |
+| Single TRB improvement | [`improvement.py`](../src/project/improvement.py) |
+| Network / configuration | [`causal_deep_model.py`](../src/models/causal_deep_model.py), [`config.py`](../src/models/config.py) |
+| Graph and transforms | [`graph.py`](../src/causal/graph.py), [`dataset.py`](../src/causal/dataset.py), [`data.py`](../src/project/data.py) |
+| Fitting / losses | [`train.py`](../src/causal/train.py) |
+| Cache orchestration | [`pipeline.py`](../src/project/pipeline.py) |
+| Generated result docs | [`reporting.py`](../src/project/reporting.py) |
+| Uploaded-record checks | [`custom_data.py`](../src/project/custom_data.py) |
+
+A run saves `paper.pt`, `improved.joblib`, `results.json`, `predictions.csv`, `embeddings.npz`, figures / projections and an integrity manifest. `.pt` is shared; Proposed adds a correction artifact, not another trained Transformer.
+
+`CausalCfg` still contains legacy LECG / ablation switches. Active `fit_candidate()` explicitly sets `use_lecg=False`. Presence of a class or old experiment file does not create an additional active method.

@@ -1,0 +1,464 @@
+{
+  "schema": 1,
+  "prepared_at": 1792935935.40384,
+  "documentation_generator_sha256": "ec83a3e8bb1463dcb74cefbd1c6daa1e363a4a0df801b1bb90f381b9c4db063e",
+  "training_seed": 73,
+  "split_seed": 42,
+  "max_epochs": 30,
+  "methods": [
+    "Paper framework",
+    "Proposed framework"
+  ],
+  "cohorts": {
+    "real": {
+      "label": "Public pediatric SLE cohort, GSE65391",
+      "run_id": "34b8bcc5bf20-tmpvf7xe",
+      "completed_at": 1792935735.5581791,
+      "patients": 157,
+      "visits": 923,
+      "input_features": 29,
+      "split_counts": {
+        "train": 109,
+        "val": 24,
+        "test": 24
+      },
+      "scored_visits": 85,
+      "flare_visits": 13,
+      "epochs_completed": 30,
+      "thresholds": {
+        "paper": 0.15,
+        "improved": 0.15
+      },
+      "metrics": {
+        "paper": {
+          "auroc": 0.5203,
+          "auprc": 0.1744,
+          "f1": 0.2817,
+          "mae": 0.826,
+          "rmse": 0.952,
+          "ece": 0.0208,
+          "brier": 0.1307
+        },
+        "improved": {
+          "auroc": 0.7201,
+          "auprc": 0.3637,
+          "f1": 0.3438,
+          "mae": 0.586,
+          "rmse": 0.722,
+          "ece": 0.0247,
+          "brier": 0.123
+        }
+      },
+      "delta_auroc": 0.19979999999999998,
+      "paired_patient_delta_ci95": {
+        "lower": -0.005468749999999886,
+        "upper": 0.4125490196078431,
+        "draws": 499
+      },
+      "correction": {
+        "flare_strength": 0.75,
+        "severity_strength": 1.0,
+        "classifier_trees": 73,
+        "severity_trees": 49,
+        "selected_flare_configuration": 2,
+        "selected_severity_configuration": 2,
+        "configuration_search": [
+          {
+            "configuration": 0,
+            "max_depth": 2,
+            "min_child_weight": 12,
+            "reg_lambda": 20.0,
+            "balanced": false,
+            "validation_auroc": 0.6892583120204603,
+            "validation_auprc": 0.30692645030906596,
+            "validation_mae": 0.45684126019477844
+          },
+          {
+            "configuration": 1,
+            "max_depth": 3,
+            "min_child_weight": 8,
+            "reg_lambda": 10.0,
+            "balanced": false,
+            "validation_auroc": 0.6962915601023018,
+            "validation_auprc": 0.3379800599847177,
+            "validation_mae": 0.46642443537712097
+          },
+          {
+            "configuration": 2,
+            "max_depth": 4,
+            "min_child_weight": 8,
+            "reg_lambda": 15.0,
+            "balanced": true,
+            "validation_auroc": 0.7269820971867007,
+            "validation_auprc": 0.3281290833706944,
+            "validation_mae": 0.4523783326148987
+          }
+        ]
+      },
+      "sha256": {
+        "results.json": "df0aee7450a29742be5ef4bfa1a7f17f3f5fed05c2ba139dff6c3f36aa8683c1",
+        "predictions.csv": "44de834ce1ebc8c3b66d3200d0a0e984e5e291bc0d488ef97b656e0046e5fe53"
+      }
+    },
+    "simulation": {
+      "label": "Simulated SLE / RA cohort",
+      "run_id": "622e2ab854dc-ufcw0qo3",
+      "completed_at": 1792935907.7912557,
+      "patients": 2000,
+      "visits": 33253,
+      "input_features": 52,
+      "split_counts": {
+        "train": 1400,
+        "val": 300,
+        "test": 300
+      },
+      "scored_visits": 4707,
+      "flare_visits": 845,
+      "epochs_completed": 30,
+      "thresholds": {
+        "paper": 0.15,
+        "improved": 0.2
+      },
+      "metrics": {
+        "paper": {
+          "auroc": 0.5885,
+          "auprc": 0.2234,
+          "f1": 0.3268,
+          "mae": 0.583,
+          "rmse": 0.743,
+          "ece": 0.0041,
+          "brier": 0.1452
+        },
+        "improved": {
+          "auroc": 0.6544,
+          "auprc": 0.2847,
+          "f1": 0.3574,
+          "mae": 0.57,
+          "rmse": 0.734,
+          "ece": 0.0084,
+          "brier": 0.1409
+        }
+      },
+      "delta_auroc": 0.06589999999999996,
+      "paired_patient_delta_ci95": {
+        "lower": 0.04693347828586082,
+        "upper": 0.08513708281309788,
+        "draws": 500
+      },
+      "correction": {
+        "flare_strength": 1.0,
+        "severity_strength": 1.0,
+        "classifier_trees": 227,
+        "severity_trees": 300,
+        "selected_flare_configuration": 1,
+        "selected_severity_configuration": 1,
+        "configuration_search": [
+          {
+            "configuration": 0,
+            "max_depth": 2,
+            "min_child_weight": 12,
+            "reg_lambda": 20.0,
+            "balanced": false,
+            "validation_auroc": 0.6362328307955307,
+            "validation_auprc": 0.2879849638836087,
+            "validation_mae": 0.5802029371261597
+          },
+          {
+            "configuration": 1,
+            "max_depth": 3,
+            "min_child_weight": 8,
+            "reg_lambda": 10.0,
+            "balanced": false,
+            "validation_auroc": 0.6386559972298228,
+            "validation_auprc": 0.2881522044218976,
+            "validation_mae": 0.5794252753257751
+          },
+          {
+            "configuration": 2,
+            "max_depth": 4,
+            "min_child_weight": 8,
+            "reg_lambda": 15.0,
+            "balanced": true,
+            "validation_auroc": 0.636343921520312,
+            "validation_auprc": 0.28451665862595565,
+            "validation_mae": 0.5801340341567993
+          }
+        ]
+      },
+      "sha256": {
+        "results.json": "58783a50551d50f89aca4d2c319c4b6af30e22cb888db92a9882ee0079eaaef9",
+        "predictions.csv": "eb54e3f5297fef0f0aa06ea012ccf712c9080185c74bb9fd14648a1e44af34db"
+      }
+    },
+    "random_1": {
+      "label": "Random cohort 1",
+      "run_id": "f615a686de19-b6fmqy_e",
+      "completed_at": 1792935918.331644,
+      "patients": 120,
+      "visits": 720,
+      "input_features": 18,
+      "split_counts": {
+        "train": 72,
+        "val": 24,
+        "test": 24
+      },
+      "scored_visits": 120,
+      "flare_visits": 22,
+      "epochs_completed": 30,
+      "thresholds": {
+        "paper": 0.05,
+        "improved": 0.2
+      },
+      "metrics": {
+        "paper": {
+          "auroc": 0.6048,
+          "auprc": 0.2496,
+          "f1": 0.3099,
+          "mae": 0.586,
+          "rmse": 0.75,
+          "ece": 0.0922,
+          "brier": 0.1576
+        },
+        "improved": {
+          "auroc": 0.6591,
+          "auprc": 0.2921,
+          "f1": 0.3871,
+          "mae": 0.572,
+          "rmse": 0.705,
+          "ece": 0.0521,
+          "brier": 0.1465
+        }
+      },
+      "delta_auroc": 0.054300000000000015,
+      "paired_patient_delta_ci95": {
+        "lower": -0.12584422657952068,
+        "upper": 0.24427959092057272,
+        "draws": 500
+      },
+      "correction": {
+        "flare_strength": 1.0,
+        "severity_strength": 0.25,
+        "classifier_trees": 29,
+        "severity_trees": 93,
+        "selected_flare_configuration": 0,
+        "selected_severity_configuration": 1,
+        "configuration_search": [
+          {
+            "configuration": 0,
+            "max_depth": 2,
+            "min_child_weight": 12,
+            "reg_lambda": 20.0,
+            "balanced": false,
+            "validation_auroc": 0.6537791710205504,
+            "validation_auprc": 0.37650460832497445,
+            "validation_mae": 0.5295189023017883
+          },
+          {
+            "configuration": 1,
+            "max_depth": 3,
+            "min_child_weight": 8,
+            "reg_lambda": 10.0,
+            "balanced": false,
+            "validation_auroc": 0.6342737722048066,
+            "validation_auprc": 0.3696426143097644,
+            "validation_mae": 0.5291725397109985
+          },
+          {
+            "configuration": 2,
+            "max_depth": 4,
+            "min_child_weight": 8,
+            "reg_lambda": 15.0,
+            "balanced": true,
+            "validation_auroc": 0.640891675374434,
+            "validation_auprc": 0.38314678468538754,
+            "validation_mae": 0.5319160223007202
+          }
+        ]
+      },
+      "sha256": {
+        "results.json": "121e211a710f937c8a29659bdebe325babf23a3582049455687676d957afcc8a",
+        "predictions.csv": "3928d73601f3e2377b15b94d872b942d9ab0dbda92101382e30727c31cc1e59f"
+      }
+    },
+    "random_2": {
+      "label": "Random cohort 2",
+      "run_id": "75351ec4a0b8-nqhh4qxp",
+      "completed_at": 1792935925.5208507,
+      "patients": 120,
+      "visits": 720,
+      "input_features": 18,
+      "split_counts": {
+        "train": 72,
+        "val": 24,
+        "test": 24
+      },
+      "scored_visits": 120,
+      "flare_visits": 31,
+      "epochs_completed": 30,
+      "thresholds": {
+        "paper": 0.15,
+        "improved": 0.15
+      },
+      "metrics": {
+        "paper": {
+          "auroc": 0.543,
+          "auprc": 0.3281,
+          "f1": 0.4,
+          "mae": 0.578,
+          "rmse": 0.778,
+          "ece": 0.0829,
+          "brier": 0.1974
+        },
+        "improved": {
+          "auroc": 0.5585,
+          "auprc": 0.3806,
+          "f1": 0.3967,
+          "mae": 0.57,
+          "rmse": 0.754,
+          "ece": 0.0624,
+          "brier": 0.193
+        }
+      },
+      "delta_auroc": 0.015499999999999958,
+      "paired_patient_delta_ci95": {
+        "lower": -0.0836681087274608,
+        "upper": 0.13591817310478546,
+        "draws": 500
+      },
+      "correction": {
+        "flare_strength": 1.0,
+        "severity_strength": 0.25,
+        "classifier_trees": 40,
+        "severity_trees": 51,
+        "selected_flare_configuration": 0,
+        "selected_severity_configuration": 1,
+        "configuration_search": [
+          {
+            "configuration": 0,
+            "max_depth": 2,
+            "min_child_weight": 12,
+            "reg_lambda": 20.0,
+            "balanced": false,
+            "validation_auroc": 0.6248196248196248,
+            "validation_auprc": 0.2485323111030338,
+            "validation_mae": 0.4583480954170227
+          },
+          {
+            "configuration": 1,
+            "max_depth": 3,
+            "min_child_weight": 8,
+            "reg_lambda": 10.0,
+            "balanced": false,
+            "validation_auroc": 0.621933621933622,
+            "validation_auprc": 0.25055126215888046,
+            "validation_mae": 0.4578299820423126
+          },
+          {
+            "configuration": 2,
+            "max_depth": 4,
+            "min_child_weight": 8,
+            "reg_lambda": 15.0,
+            "balanced": true,
+            "validation_auroc": 0.6127946127946128,
+            "validation_auprc": 0.24173118834493884,
+            "validation_mae": 0.45919957756996155
+          }
+        ]
+      },
+      "sha256": {
+        "results.json": "7a4b670b5513642f612a152e0e0307b9c37b10fc5338b44d16951f4c6a34b48d",
+        "predictions.csv": "da71674111f1746820962faafdd1999e3ccdc41d90d2a006ba635014d182a126"
+      }
+    },
+    "random_3": {
+      "label": "Random cohort 3",
+      "run_id": "fb35ca376537-04y8fej8",
+      "completed_at": 1792935933.0109203,
+      "patients": 120,
+      "visits": 720,
+      "input_features": 18,
+      "split_counts": {
+        "train": 72,
+        "val": 24,
+        "test": 24
+      },
+      "scored_visits": 120,
+      "flare_visits": 30,
+      "epochs_completed": 30,
+      "thresholds": {
+        "paper": 0.125,
+        "improved": 0.15
+      },
+      "metrics": {
+        "paper": {
+          "auroc": 0.4937,
+          "auprc": 0.2494,
+          "f1": 0.416,
+          "mae": 0.504,
+          "rmse": 0.692,
+          "ece": 0.0751,
+          "brier": 0.1935
+        },
+        "improved": {
+          "auroc": 0.547,
+          "auprc": 0.2732,
+          "f1": 0.4098,
+          "mae": 0.496,
+          "rmse": 0.677,
+          "ece": 0.0484,
+          "brier": 0.1909
+        }
+      },
+      "delta_auroc": 0.053300000000000014,
+      "paired_patient_delta_ci95": {
+        "lower": -0.01705995154271016,
+        "upper": 0.14521790325513725,
+        "draws": 500
+      },
+      "correction": {
+        "flare_strength": 1.0,
+        "severity_strength": 0.25,
+        "classifier_trees": 43,
+        "severity_trees": 44,
+        "selected_flare_configuration": 0,
+        "selected_severity_configuration": 1,
+        "configuration_search": [
+          {
+            "configuration": 0,
+            "max_depth": 2,
+            "min_child_weight": 12,
+            "reg_lambda": 20.0,
+            "balanced": false,
+            "validation_auroc": 0.6340445269016698,
+            "validation_auprc": 0.3822682319206975,
+            "validation_mae": 0.47430184483528137
+          },
+          {
+            "configuration": 1,
+            "max_depth": 3,
+            "min_child_weight": 8,
+            "reg_lambda": 10.0,
+            "balanced": false,
+            "validation_auroc": 0.6247680890538033,
+            "validation_auprc": 0.2784750379244,
+            "validation_mae": 0.47328728437423706
+          },
+          {
+            "configuration": 2,
+            "max_depth": 4,
+            "min_child_weight": 8,
+            "reg_lambda": 15.0,
+            "balanced": true,
+            "validation_auroc": 0.6182745825602969,
+            "validation_auprc": 0.2648688925445427,
+            "validation_mae": 0.47330376505851746
+          }
+        ]
+      },
+      "sha256": {
+        "results.json": "839aee4bd985a804765e4ea83b5d78bf73c31b2078dc7953f705f6b460d0a32c",
+        "predictions.csv": "c5ae4bc31b670641914d0e4eddf972196787aa0401bef3a74238c8e259f6e7fb"
+      }
+    }
+  }
+}

@@ -1,155 +1,226 @@
-> Historical Stage I methodology. Some referenced files are absent in this checkout.
-> For the current implementation and verified findings, see [PROJECT_AUDIT.md](PROJECT_AUDIT.md).
+# Methodology: the paper and our proposed framework
 
-# Research methodology, objectives and novelty
+The active project compares exactly **two methods**: our local **Paper framework** and the **Proposed framework**, which adds Temporal Residual Boosting (TRB) to the same fitted neural network. This document replaces the earlier Stage I and LECG methodology.
 
-*Academic research prototype. Not clinically validated. Not a substitute for professional medical judgment.*
+See [Architecture](CAUSAL_MODEL.md) for implementation details, [Measured results](MEASURED_RESULTS.md) for all scores and [the architecture sheet](architecture_sheet.html) for a compact visual.
 
-## 1. Research question
+## 1. What the original paper does
 
-> Given a patient's medical history up to their current visit, what clinically relevant outcome is likely
-> to occur at their next visit, and how reliable is that prediction?
+**Sharma and Kaur (2025), _Causal Representation Learning for Predicting Autoimmune Disease Progression From Longitudinal Multimodal Clinical Data_, IEEE Access 13, 150010-150027.** [DOI](https://doi.org/10.1109/ACCESS.2025.3598276) · [supplied PDF](paper/reference.pdf).
 
-The project moves from "does this patient have the disease now?" (single-visit classification) to
-"what will happen at the next visit?" (longitudinal prediction).
+The paper predicts a flare and disease severity at the following clinical visit for patients with systemic lupus erythematosus (SLE) or rheumatoid arthritis (RA). It combines treatment, laboratory and other structured clinical histories, aiming to model temporal relationships while reducing sensitivity to observational confounding.
 
-## 2. Objectives
+For history available through visit `t`, the two prediction tasks are:
 
-1. Organise visit records chronologically per patient and engineer features that use only past information.
-2. Predict one clearly defined next-visit outcome: **flare at the next record** (SLEDAI rise >= 4).
-3. Compare a baseline (logistic regression) with Random Forest and gradient boosting (XGBoost).
-4. Test whether **history** (changes between visits) improves prediction over a **static** model that sees
-   only the current visit.
-5. Validate correctly: patient-level splits, a forward-in-time check, calibration and confidence intervals.
-6. Report prediction **reliability** (ensemble spread) and **explanations** (SHAP), and separate
-   association from causation.
-7. Deliver a Streamlit app that never uses or displays future records as if they were known.
+$$\widehat p_{t+1}=f_\theta(X_{1:t},A_{1:t}),\qquad
+\widehat s_{t+1}=f^{\mathrm{sev}}_\theta(X_{1:t},A_{1:t}).$$
 
-## 3. Dataset check (done before any modelling)
+`X` denotes measurements, `A` treatment information, `p` flare probability and `s` severity. Future outcomes are supervision, not inputs. See Section III.A, equations 1-2, PDF page 5.
 
-| Requirement | GSE65391 | Verdict |
+The authors report 2,000 clinical patients, approximately 33,100 visits, 54 feature dimensions and a 70% / 15% / 15% split (IV.A, PDF page 13). These are the publication's cohort characteristics; our simulated records are not the authors' original patient data.
+
+## 2. Paper architecture and training methodology
+
+```mermaid
+flowchart TD
+    A[Measurements and treatment history] --> G[Hybrid clinical / statistical graph]
+    G --> E[Structural encoder: R-GCN]
+    E --> D[Causal / nuisance latent decomposition]
+    D --> M[MRTF: multiple temporal resolutions]
+    M --> T[Temporal Causal Transformer]
+    T --> P[Flare and severity decoders]
+    T --> C[Counterfactual Simulation Engine]
+    C --> P
+    D -. Invariance penalties .-> L[Joint training losses]
+    P --> L
+    C --> L
+    P --> U[Uncertainty and interpretation]
+```
+
+| Paper component | Role | PDF source |
 |---|---|---|
-| Repeated visits per patient | 157 SLE patients, 923 records, up to 22 per patient | yes |
-| Patient identifier | `subject` | yes |
-| Time information | `cumulative_time` (days from first record), `days_since_last_visit`; no calendar dates | partly |
-| Meaningful future outcome | SLEDAI at the next record | yes |
-| Usable prediction points | 635 (patients with >= 3 records), flare rate 17.2 % | small |
+| Hybrid causal graph | Combine expert priors with conditional-independence testing to define directed variable relationships. | III.C, equations 3-4, page 6 |
+| R-GCN structural encoder | Learn a visit representation with relation-specific messages between clinical / treatment nodes. | III.D, equations 5-6, pages 6-7 |
+| Counterfactual Simulation Engine (CSE) | Infer latent noise from factual history and simulate an alternative treatment through the assumed structural model. | III.E, equations 7-9, pages 7-8 |
+| Temporal Causal Transformer (TCT) | Use masked attention, time gaps and treatment-aware gates to model earlier visits. | III.F, equations 10-12, page 8 |
+| Multi-Resolution Temporal Fusion (MRTF) | Combine short- and long-window representations using learned gates. | III.G, equations 13-15, pages 8-9 |
+| Causal Disentanglement and Invariance (CDI) | Separate intended stable / nuisance factors using HSIC dependence and MMD subgroup penalties. | III.H, equations 16-19, pages 9-10 |
+| Uncertainty / interpretation | MC dropout, Gaussian-mixture severity, attributions, attention and counterfactual examples. | III.I-J, equations 20-26, pages 10-11 |
 
-Not supported by this dataset (so **not** attempted): hospital readmission, complications, abnormal-lab
-prediction, glucose/blood-pressure/BMI trends. Nothing was fabricated; no synthetic data is used.
+The graph-fusion rule is `G = lambda * G_prior + (1-lambda) * G_stat`. The R-GCN uses this structure to encode relationships. MRTF supplies several temporal resolutions; the TCT then learns which earlier visits influence the next prediction. Auxiliary modules are parts of the architecture, not additional comparison models.
 
-**Future-information columns found and excluded** (they describe the whole follow-up or are derived from it):
-`visit_count` (patient's total visits), `days_between_diagnosis_and_last_visit` (span to the LAST visit),
-`biopsy_history`, `nephritis_class`, `days_since_kidney_biopsy` (negative before the biopsy), the study's
-train/test `set`, `batch`, and derived groupings (`disease_activity`, `treatment_lmm1`, ...).
-A first version of the feature code also leaked through a default value that used the patient's total number
-of visits; the unit tests caught it and it was fixed.
+The publication combines variational / reconstruction learning, total correlation, counterfactual consistency, focal classification loss and contrastive trajectory learning:
 
-## 4. Method
+$$\mathcal L=\mathcal L_{ELBO}+\lambda_{TC}\mathcal L_{TC}
++\lambda_{CF}\mathcal L_{CF}+\lambda_{FL}\mathcal L_{FL}+\lambda_{CT}\mathcal L_{CT}.$$
 
-**Target.** For visit *t* with a next record *t+1*: `y = 1` if `SLEDAI(t+1) - SLEDAI(t) >= 4`.
-This is a proxy flare label derived from the disease-activity score, not an adjudicated clinical event.
+See equation 32 and Algorithm 1, PDF pages 12-13; CDI is additionally described in III.H. The paper specifies Adam, initial learning rate `1e-4`, batch size `64` and validation early stopping. Our 30-epoch cap is a project default, not an established exact paper training schedule.
 
-**Features (87, longitudinal).** Current values (labs, treatments, SLEDAI items, age, time since diagnosis),
-plus for 11 key variables: previous value, change since previous visit, rate of change per 30 days, mean of
-the last 3 visits; plus history features (highest and mean SLEDAI so far, flares already observed,
-visits since the last flare, consecutive rises, treatment changes, visits on oral steroids). The **static**
-comparison model uses only the 31 current-visit features. Race and gender are not used by default.
+The paper's preprocessing descriptions differ: III.A discusses GRU-D and timeline alignment / resampling, while IV.A describes carry-forward plus domain imputation and within-patient min-max normalization. Our implementation choices are therefore explicit, rather than described as an exact reconstruction of an unavailable original pipeline.
 
-**Leakage control.** Features of row *t* are computed only from records 1..*t*. `tests/test_no_leakage.py`
-verifies (a) identical features when later visits are removed and (b) unchanged features when later visits
-are overwritten with extreme values.
+### Published performance
 
-**Models.** Logistic regression (L2), Random Forest, XGBoost, plus two sanity baselines (average rate and
-current-SLEDAI-only). Hyper-parameters are fixed and modest because of the small cohort. LSTM/GRU were
-**not** used: about 110 patients with a usable next visit is too few for a sequence network to be reliable.
+Tables 2-3 and IV.F report AUROC `0.867`, AUPRC `0.726`, F1 `0.702`, severity MAE `0.74`, RMSE `0.95`, and ECE `0.032` (PDF pages 14-15). These are the authors' results on their own clinical cohort, not scores generated by our code. We cannot establish superiority over `0.867` without access to that original cohort and a matched evaluation.
 
-**Validation.**
-- Patient-level hold-out (79 train / 32 test patients, no overlap, asserted in code).
-- Model choice: repeated (3x) patient-grouped, outcome-stratified 5-fold CV on training patients only.
-- Threshold and Platt calibration are fitted on out-of-fold training predictions.
-- Forward-in-time check: train on early records (<= median record index) of training patients, test on later
-  records of held-out patients. (There are no calendar dates, so "time" is patient time.)
-- Research experiment: static vs longitudinal on **all** patients with 5x repeated grouped CV, and a paired
-  patient-level bootstrap (1000x) for the difference.
-- Metrics: AUROC, PR-AUC, precision, recall, F1, Brier score, expected calibration error, 95 % patient-bootstrap CIs.
+The publication calls its own model “Proposed Framework.” In this project, **Paper framework** means our implementation of that design, while **Proposed framework** means our TRB extension. These names must be distinguished when reading the original table images.
 
-**Uncertainty and the deployed model.** 60 models are trained on patient bootstrap resamples. A patient
-already in the data is scored **only** by models that never saw them (out-of-bag); a new patient is scored by
-all. The reported probability is the Platt-calibrated ensemble mean; the band is the 10th-90th percentile of
-the models. This captures model uncertainty only.
+## 3. Our local Paper framework
 
-**Explainability.** SHAP (linear or tree explainer, whichever matches the selected model), averaged over
-up to 10 of the models that produced the prediction, summarised by type of information (recent trend, longer
-history, treatment, current values, timing). SHAP describes what the model uses, **not** what would happen if
-a measurement or treatment were changed.
+[`pair.fit_candidate()`](../src/project/pair.py) explicitly uses `CausalCfg(use_lecg=False)`. Both compared methods share this fitted backbone.
 
-## 5. Results (from `reports/metrics.json`, this run)
+- The fixed relation graph uses a clinical prior and **training-only** partial-correlation statistics, rather than a full PC / kernel-HSIC discovery procedure.
+- Two R-GCN layers encode values, observation masks and a latent node; a direct input skip path is also present.
+- The visit code is split into 32 intended causal and 16 nuisance dimensions. The naming is an objective, not proof of identified causal factors.
+- MRTF uses windows of **1, 3 and 6 visits**, not daily / weekly / monthly resampling.
+- A two-layer, four-head TCT produces 64-dimensional temporal embeddings. Its mask is lower-triangular plus padding; it does not implement a full DAG-path attention mask.
+- The factual network has a latent-noise / treatment-action path, a flare head and a three-component Gaussian-mixture severity head.
+- Losses approximate the paper: TC uses off-diagonal correlation; consistency compares sampled- and mean-noise factual predictions, not verified real intervention effects.
+- Paired evaluation uses deterministic `model.eval()` / `sample_noise=False` predictions and validation-fitted Platt scaling. It does not use MC-dropout intervals.
 
-| Evaluation | AUROC | PR-AUC |
+These shared adaptations are not the difference credited to TRB. [CAUSAL_MODEL.md](CAUSAL_MODEL.md) documents shapes, losses and source files.
+
+## 4. The new implementation: Temporal Residual Boosting
+
+### Motivation and architectural influence
+
+The neural network compresses an irregular, partially observed history into a temporal embedding. With limited patients, recent measurements, missingness or longer trends may remain insufficiently expressed in the final prediction. TRB gives a nonlinear correction explicit access to those signals while retaining the neural prediction as its starting point.
+
+```mermaid
+flowchart LR
+    X[Available visits: values, masks, gaps] --> N[Shared Paper neural backbone]
+    N --> P[Paper probability and severity]
+    N --> H[Temporal embedding h_t]
+    X --> Q[Past-only history summaries]
+    H --> J[Correction inputs]
+    Q --> J
+    P --> B[Paper margin / severity starting point]
+    B --> R[TRB classification and residual regression]
+    J --> R
+    R --> O[Proposed probability and severity]
+```
+
+**Added:** one prediction stage, engineered history inputs and a second training stage. **Shared:** preprocessing, graph, R-GCN, MRTF, TCT, neural weights, patient split and neural seed. LECG is disabled in both methods; the extension does not change graph edges.
+
+### Correction inputs
+
+[`history_features()`](../src/project/improvement.py) forms nine groups per clinical variable:
+
+| Group | Available information |
+|---|---|
+| Current normalized values | Current measurements; missing values zero-filled after scaling. |
+| Observation mask | Whether each measurement was observed. |
+| Running observed mean | Average of available values through the current visit. |
+| Recent exponential history | Forward-only summary with weight 0.5 for a newly observed value. |
+| Previous-visit difference | Change from the preceding scaled visit representation. |
+| Last-three-visit mean | Observed-value mean over up to three recent visits. |
+| Last-observed change | Difference from the most recent available measurement. |
+| Change rate | Last-observed change divided by elapsed 30-day gap units, with denominator at least one. |
+| Observation age | `log1p` of gap units elapsed since that variable was observed. |
+
+One transformed time gap and the 64-dimensional temporal embedding are also included. The vector has `9V + 65` dimensions: **326** for 29 public-cohort inputs, **533** for 52 main-simulation inputs and **227** for 18 random-cohort inputs. This is an engineered-vector size, not a count of independent measurements. Patient IDs and future-outcome columns are not inputs.
+
+### Flare: correction in logit space
+
+Let `p_P` be the calibrated Paper probability, `ell_P = logit(p_P)`, and `F(q_t; ell_P)` the classifier's corrected margin. XGBoost is fitted with `ell_P` as `base_margin`. The final probability is:
+
+$$\widehat p_{proposed}=\sigma\left(\ell_P+\alpha\,[F(q_t;\ell_P)-\ell_P]\right).$$
+
+The classifier learns through the boosting objective with an offset; it is not a separate regression on `label - probability`. Validation selects `alpha` from `{0, 0.25, 0.5, 0.75, 1}`. Zero correction remains available if the added head does not improve validation ranking.
+
+### Severity: regression on prediction residuals
+
+The regressor learns `actual severity - s_P`, where `s_P` is the raw Paper mixture mean:
+
+$$\widehat s_{proposed}=\operatorname{clip}_{[0,4]}\left(s_P+\beta R(q_t)\right).$$
+
+Validation selects `beta` from the same strengths using MAE. Classification and severity can choose different configurations and strengths.
+
+### The changed training methodology
+
+1. Fit the shared neural backbone on training patients, stopping on validation loss.
+2. Freeze it and extract deterministic training / validation predictions and embeddings.
+3. Fit correction heads on training-patient targets; classification uses the Paper margin, regression its severity residual.
+4. Select tree stopping points, configurations and strengths using validation patients only.
+5. Freeze both methods and score identical held-out patients.
+
+This turns a single neural predictor into a **neural-plus-boosting predictor fitted in two stages**. Gradients do not pass back from trees into the network. XGBoost is an established algorithm; our contribution is this architecture / history integration and evaluation, not invention of boosting.
+
+The fixed internal search uses depth / minimum-child-weight / L2 settings `(2,12,20)`, `(3,8,10)` and `(4,8,15)`. The last considers patient-balanced weights. Heads allow up to 300 trees at learning rate `0.03`, with 25-round early stopping. Classification ranks validation AUROC, then AUPRC, then negative Brier; severity uses validation MAE. These are configurations inside one framework, not additional methods.
+
+## 5. Datasets, targets and preprocessing
+
+| Dataset | Role | Patient split |
 |---|---|---|
-| Held-out patients (32 patients, 157 rows, 26 flares), longitudinal logistic regression | 0.65 (0.49-0.77) | 0.33 (0.15-0.53) |
-| Held-out, best static model (Random Forest by CV rule) | 0.56 (0.40-0.71) | 0.25 |
-| Held-out, chance | 0.50 | 0.17 |
-| Out-of-bag over all 111 patients (deployed ensemble) | 0.63 (0.58-0.68) | 0.27 (0.21-0.35) |
-| All patients, repeated grouped CV, logistic: static vs longitudinal | 0.67 vs 0.64 | 0.30 vs 0.26 |
+| GSE65391 public SLE | 157 patients, 923 visits, 29 treatment / laboratory / symptom / current-SLEDAI inputs. Genomics are not used here. | 109 train / 24 validation / 24 test |
+| Main simulated SLE / RA | 2,000 generated patients, 52 input variables; the legacy “54-dim” name also counts two outcomes. Not the authors' clinical records. | 1,400 / 300 / 300 |
+| Three random stress tests | Each has 120 generated patients, six visits, 18 inputs and 20% added graph edges. | 72 / 24 / 24 each |
 
-- The held-out test set is small (26 flares); intervals are wide and the lower AUROC bound is about 0.5.
-- Static minus longitudinal differences are within noise (paired intervals include 0 for random forest and
-  XGBoost; for logistic regression the longitudinal model is slightly *worse*, AUROC difference -0.03,
-  95 % CI -0.06 to 0.00).
-- Platt scaling improved held-out calibration (ECE 0.09 -> 0.03; Brier 0.147 -> 0.132).
-- The F1-optimal alert threshold flags most visits (out-of-bag recall 83 %, precision 21 % vs 17 % base rate),
-  so it is a weak screening rule.
-- Forward-in-time check (72 rows, 10 flares) is too small to interpret.
+Public-data flare is the proxy `SLEDAI(t+1) - SLEDAI(t) >= 4`. Next severity uses bins **0, 1-5, 6-10, 11-19, >=20**, mapped to categories 0-4. These are project definitions, not the paper's exact original labeling protocol. Simulations use their generated next-visit targets.
 
-**Bottom line:** the pipeline works and is leak-audited, but next-visit flare is hard to predict from this
-small cohort, and the data do not show that history improves accuracy.
+Histories retain recorded order. Selected skewed measurements are log-transformed and standardized using training-patient statistics; treatments retain source coding. Missing values are zero-filled after transformation and accompanied by masks. Time gaps enter as `log1p(gap_days / 30)`. Future extrema, held-out measurements and future targets do not fit scaling.
 
-## 6. Novelty - what can and cannot be claimed
+A final visit without a following outcome is excluded from supervised scores. Uploaded records can still receive a prediction there; unknown outcomes remain unscored.
 
-A quick literature check (web search, not a systematic review) found existing work, so **"first SLE flare
-prediction model" cannot be claimed**:
-- FLAME, "A fair machine learning model to predict flares of systemic lupus erythematosus" (PMC12296391):
-  EHR cohort of 28,433 adults, flare within 3 months of an outpatient visit defined as a SLEDAI-2K rise of
-  >= 4 points over baseline, XGBoost and logistic regression on 12 months of prior data, AUROC about 0.66.
-- Pediatric SLE flare prediction from gene-expression data and machine learning (NHSJS, 2026) - appears to
-  use the same kind of public paediatric data (I only saw the title and listing).
-- "Comparing two machine learning approaches in predicting lupus hospitalization using longitudinal data"
-  (PMC9525268) - title seen only.
-- Other flare-prediction abstracts (ACR, PAGE meeting, JMIR Formative Research 2025) exist.
+## 6. Evaluation and reproducibility
 
-Defensible contributions of this project:
-1. A **leak-audited, patient-split next-visit pipeline** on a public SLE cohort with unit tests, including the
-   specific leaking columns found in the public file.
-2. A **direct, paired comparison of static vs longitudinal features** with patient-level intervals - and an
-   honest negative/neutral finding in this cohort.
-3. A single tool combining **out-of-bag per-patient prediction, a reliability band and trend-level
-   explanation**, with an "insufficient history" rule and no display of future data as known.
+Both methods share patient splits and neural weights. Defaults are maximum 30 epochs, batch size 64, learning rate `1e-4`, patience six, and dataset / split seed 42.
 
-Not claimed: improved accuracy over existing models, causal conclusions, or clinical utility.
-A fuller novelty statement would need a systematic literature search.
+A one-time validation search considered neural seeds **7, 21, 42, 73, 123**. Proposed validation AUROC selected **73**, with AUPRC, Brier and severity MAE tie breakers. It is frozen in `config/frozen_seed.json`; ordinary launches and `--update` reuse it. Test scores do not select the seed.
 
-## 7. Limitations
+Paper probabilities receive validation-fitted Platt scaling. Each framework's Yes/No threshold maximizes validation F1 over a fixed grid, then stays fixed for test / uploaded outcomes. Paired metrics are AUROC, AUPRC, F1, severity MAE / RMSE, Brier and ECE.
 
-- Small, single-study, mostly female paediatric cohort; no external validation.
-- Flare is a SLEDAI-based proxy; "next record" may skip visits (visit numbers have gaps in 70 patients) and
-  the gap to the next record varies (median 84 days, up to 735).
-- No calendar dates, so true chronological (by date) validation is not possible.
-- Several features are noisy or missing (anti-dsDNA 30 %, albumin 20 %, creatinine 17 % missing); imputation
-  is simple (median, inside each training fold).
-- Treatment flags are observational and confounded by indication; SHAP and any "what-if" reading are
-  associations only.
-- Only SLE (no RA); the base paper's multimodal inputs (CRP, vitals, cytokines) are not in this file.
-- Reliability band reflects model disagreement, not real-world error.
+The AUROC-change interval uses 500 paired **patient** bootstrap resamples, retaining draws with both classes. It resamples the evaluation patients for fixed fitted models; it excludes retraining, seed-search and population uncertainty.
 
-## 8. Future enhancements
+Validation is reused for checkpoint choice, calibration, head tuning, seed selection and thresholds. Seed selection favors Proposed rather than independently optimizing Paper. Results are conditional on this exploratory selection, not a comparison to the best possible paper implementation. Independent or nested grouped validation remains future work.
 
-- Add a second cohort (for example MIMIC-IV, after credentialing) for external validation and richer
-  labs/vitals; add RA.
-- Sequence models (GRU / the Temporal Causal Transformer from the base paper) once more patients are available.
-- Pre-declared secondary outcomes (next-visit high disease activity, renal involvement) and a sensitivity
-  analysis for the flare threshold and for consecutive-visit pairs only.
-- Add the gene-expression modality that ships with GSE65391.
-- Causal modules: now built as Stage II - see `docs/CAUSAL_MODEL.md` (the statements above describe Stage I only).
-- Fairness analysis by sex and ancestry; conformal prediction for guaranteed-coverage uncertainty.
+## 7. How much did it improve?
+
+This block is regenerated from completed runs alongside the README. Full metrics, including unfavorable changes, and source hashes appear in [MEASURED_RESULTS.md](MEASURED_RESULTS.md).
+
+<!-- RUN_RESULTS:START -->
+
+Generated from the latest completed run. Retraining updates this section automatically.
+
+Frozen model seed: **73**. Patient split seed: **42**. Maximum neural epochs: **30**.
+
+| Evaluation cohort | Paper framework AUROC | Proposed framework AUROC | Change |
+|---|---:|---:|---:|
+| Public pediatric SLE cohort, GSE65391 | 0.5203 | 0.7201 | +19.98 points |
+| Simulated SLE / RA cohort | 0.5885 | 0.6544 | +6.59 points |
+
+Public SLE holdout: AUPRC **0.1744 → 0.3637**, F1 **0.2817 → 0.3438**, severity MAE **0.826 → 0.586**.
+
+Public pediatric SLE cohort, GSE65391: **24 held-out patients**; paired patient bootstrap 95% interval for AUROC change: **-0.55 to +41.25 points**.
+
+Simulated SLE / RA cohort: **300 held-out patients**; paired patient bootstrap 95% interval for AUROC change: **+4.69 to +8.51 points**.
+
+The seed was chosen using validation scores, not test scores. These are exploratory local comparisons; performance can vary across datasets and the original paper cohort is unavailable.
+
+<!-- RUN_RESULTS:END -->
+
+An AUROC increase of `0.04` is **4 percentage points**, different from a 4% relative increase. Relative error reduction is `(Paper error - Proposed error) / Paper error * 100`.
+
+The observed gains do not guarantee 4-5 points on every dataset. Inspect the generated result tables for calibration and F1 trade-offs as well as AUROC. Better ranking does not imply every metric or individual prediction improves.
+
+## 8. What can be claimed
+
+The project implements a paper-inspired graph / temporal backbone and one past-only, missingness-aware residual correction. Stored holdouts show gains in several predictive metrics against that shared local backbone. The workflow also supplies paired evaluation, actual-data / uploaded-outcome checking and cached visualizations.
+
+It does not establish superiority on the authors' unavailable cohort, universal gains, clinical validity, a new boosting algorithm, or identified treatment effects. A t-SNE / PCA cluster or treatment perturbation is not proof of causality. Neural explanations and uncertainty measures do not automatically cover the tree correction.
+
+## 9. Reproduce and read further
+
+```shell
+uv sync --locked
+uv run python run.py --check-device
+uv run python run.py
+```
+
+`--prepare-only` prepares without the UI; `--update` rebuilds with the frozen seed. Completed runs are hash-verified and reused. Training refreshes the generated result documents; the source-paper graphics remain fixed historical references.
+
+- [Architecture](CAUSAL_MODEL.md)
+- [All measured gains and limitations](MEASURED_RESULTS.md)
+- [Current implementation audit](PROJECT_AUDIT.md)
+- [Installation and app instructions](../README.md)
+
+*Academic research prototype. Causal terminology describes paper and model assumptions; these comparisons evaluate prediction.*

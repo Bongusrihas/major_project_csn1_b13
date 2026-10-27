@@ -1,133 +1,22 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<title>Longitudinal Patient Health Prediction - one-page sheet</title>
-<style>
-  :root{--ink:#1b2430;--mut:#5b6675;--line:#d6dbe3;--bg:#f6f7f9;--card:#fff;--blue:#1f6feb;--amber:#d97706;--green:#059669;--red:#d62728;--violet:#7c3aed}
-  *{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 "Segoe UI",Helvetica,Arial,sans-serif}
-  .page{width:1700px;padding:22px 26px 20px}
-  h1{margin:0;font-size:25px} .sub{color:var(--mut);margin:2px 0 14px;font-size:13.5px}
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 13px}
-  .card h2{margin:0 0 6px;font-size:14.5px;display:flex;gap:8px;align-items:center}
-  .n{background:var(--blue);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:none}
-  .f{font-family:"Cambria Math",Cambria,"Times New Roman",serif;background:#f1f4f9;border-left:3px solid var(--blue);padding:4px 8px;margin:5px 0;font-size:14px}
-  ul{margin:4px 0 0 16px;padding:0} li{margin:1px 0}
-  .tag{display:inline-block;border-radius:4px;padding:0 6px;font-size:11.5px;color:#fff;margin-right:3px}
-  .bad{color:var(--red);font-weight:600} .ok{color:var(--green);font-weight:600}
-  table{border-collapse:collapse;width:100%;font-size:12px} td,th{border-bottom:1px solid var(--line);padding:2px 5px;text-align:left}
-  .strip{margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-  .strip h2{margin:0 0 7px;font-size:14.5px}
-  .flow{display:flex;align-items:stretch;gap:0}
-  .step{flex:1;background:#eef4ff;border:1px solid #c9dbfb;border-radius:8px;padding:6px 7px;text-align:center;font-size:12px;position:relative}
-  .step b{display:block;font-size:12.5px;color:#12408f}
-  .arrow{align-self:center;padding:0 3px;color:var(--mut);font-size:18px}
-  .s2{background:#fff6e8;border-color:#f6d9a8}.s2 b{color:#8a4b00}
-  .s3{background:#e9f8f1;border-color:#b6e5d0}.s3 b{color:#046a49}
-  .warn{background:#fff1f0;border:1px solid #f3c1bd;border-radius:6px;padding:4px 8px;margin-top:6px;font-size:12px}
-</style></head><body><div class="page">
-<h1>Longitudinal Patient Health Prediction - from previous visits to the next visit</h1>
-<div class="sub">Question: <i>given a patient's history up to the current visit, what outcome is likely at the next visit, and how reliable is that prediction?</i> &nbsp;|&nbsp; Academic research prototype - not a clinically validated tool.</div>
-
-<div class="grid">
-
-<div class="card"><h2><span class="n">1</span>Data (public, real)</h2>
-  <ul><li><b>GSE65391</b> - paediatric SLE cohort (NCBI GEO)</li>
-  <li>157 patients, 923 visit records (avg 5.9 per patient)</li>
-  <li>Per visit: 14 labs, 8 treatment flags, SLEDAI + 6 organ items, age</li>
-  <li>Usable prediction points: <b>635</b> (111 patients with &ge;3 records); flares = <b>17.2 %</b></li>
-  <li>No calendar dates: time = days since the patient's first record</li></ul>
-  <svg viewBox="0 0 420 70" width="100%" height="64">
-    <line x1="10" y1="40" x2="410" y2="40" stroke="#9aa5b4" stroke-width="2"/>
-    <g fill="#1f6feb"><circle cx="40" cy="40" r="7"/><circle cx="120" cy="40" r="7"/><circle cx="190" cy="40" r="7"/><circle cx="290" cy="40" r="7"/></g>
-    <circle cx="370" cy="40" r="7" fill="#fff" stroke="#d62728" stroke-width="2" stroke-dasharray="3 2"/>
-    <text x="40" y="62" font-size="11" text-anchor="middle">v1</text><text x="120" y="62" font-size="11" text-anchor="middle">v2</text>
-    <text x="190" y="62" font-size="11" text-anchor="middle">v3</text><text x="290" y="62" font-size="11" text-anchor="middle">v4 = now (t)</text>
-    <text x="370" y="62" font-size="11" text-anchor="middle" fill="#d62728">v5 = next</text>
-    <rect x="8" y="14" width="300" height="14" rx="4" fill="#e9f0ff" stroke="#1f6feb"/><text x="158" y="25" font-size="10.5" text-anchor="middle" fill="#12408f">model may use visits &le; t</text>
-    <text x="370" y="25" font-size="10.5" text-anchor="middle" fill="#d62728">target only</text>
-  </svg></div>
-
-<div class="card"><h2><span class="n">2</span>Target (one clear outcome)</h2>
-  <div class="f">y<sub>t+1</sub> = 1 &nbsp;if&nbsp; SLEDAI<sub>t+1</sub> &minus; SLEDAI<sub>t</sub> &ge; 4 &nbsp;else 0</div>
-  <ul><li>"Flare at the next record" (&ge;4-point rise is a common SLEDAI flare cut-off)</li>
-  <li>A proxy label derived from SLEDAI - <b>not</b> clinician-adjudicated</li>
-  <li>Needs &ge;2 records (current + one earlier) to measure change</li>
-  <li>Not predicted: readmission, complications, abnormal labs (not supported by this dataset)</li></ul></div>
-
-<div class="card"><h2><span class="n">3</span>Leakage-free features (87)</h2>
-  <div class="f">&Delta;x<sub>t</sub> = x<sub>t</sub> &minus; x<sub>t&minus;1</sub> &nbsp; slope = &Delta;x<sub>t</sub> / gap &times; 30 &nbsp; roll3 = mean(x<sub>t&minus;2..t</sub>)</div>
-  <ul><li>Trends for 11 variables (previous value, change, slope, 3-visit mean)</li>
-  <li>History: highest/mean SLEDAI so far, flares seen so far, visits since last flare, treatment changes</li>
-  <li><span class="bad">Excluded as future information:</span> total visit count, span to last visit, biopsy timing/class, study split</li>
-  <li class="ok">Unit tests prove a visit's features do not change if later visits are altered</li></ul></div>
-
-<div class="card"><h2><span class="n">4</span>Models &amp; validation</h2>
-  <table><tr><th>Model</th><th>Role</th></tr>
-  <tr><td>Logistic Regression</td><td>baseline (L2, C=0.1)</td></tr>
-  <tr><td>Random Forest</td><td>300 trees, leaf &ge;5</td></tr>
-  <tr><td>XGBoost</td><td>depth 3, 200 trees</td></tr>
-  <tr><td>Average-rate / SLEDAI-only</td><td>sanity baselines</td></tr>
-  <tr><td>LSTM / GRU</td><td>not used - too few patients</td></tr></table>
-  <svg viewBox="0 0 420 62" width="100%" height="56">
-    <rect x="4" y="6" width="250" height="22" rx="4" fill="#e9f0ff" stroke="#1f6feb"/><text x="129" y="21" font-size="11" text-anchor="middle">79 train patients - grouped 5-fold CV x3</text>
-    <rect x="262" y="6" width="150" height="22" rx="4" fill="#fff6e8" stroke="#d97706"/><text x="337" y="21" font-size="11" text-anchor="middle">32 held-out patients</text>
-    <text x="210" y="48" font-size="11" text-anchor="middle" fill="#5b6675">split by PATIENT - no patient appears on both sides; forward-in-time check inside each patient</text></svg></div>
-
-<div class="card"><h2><span class="n">5</span>Metrics</h2>
-  <div class="f">Precision = TP/(TP+FP) &nbsp; Recall = TP/(TP+FN) &nbsp; F1 = 2PR/(P+R)</div>
-  <div class="f">Brier = mean (p &minus; y)&sup2; &nbsp; ECE = &Sigma; (n<sub>b</sub>/n) |obs<sub>b</sub> &minus; pred<sub>b</sub>|</div>
-  <ul><li>AUROC and PR-AUC (chance PR-AUC = flare rate 0.17)</li>
-  <li>Threshold chosen on out-of-fold training data only</li>
-  <li>Platt scaling for calibration; 95 % CIs by resampling patients (1000x)</li></ul></div>
-
-<div class="card"><h2><span class="n">6</span>Uncertainty &amp; explanation</h2>
-  <div class="f">f(x) = &phi;<sub>0</sub> + &Sigma;<sub>i</sub> &phi;<sub>i</sub> &nbsp;(SHAP) &nbsp;&nbsp; p&#770; = mean<sub>b&in;OOB</sub> p<sub>b</sub></div>
-  <ul><li>60 bootstrap-by-patient models; a known patient is scored only by models that never saw them</li>
-  <li>Spread of the models (10-90 %) = reliability band</li>
-  <li>SHAP groups: recent trend / longer history / treatment / current values</li></ul>
-  <div class="warn"><b>Association &ne; causation:</b> SHAP shows what the model uses, not what would happen if a treatment changed.</div></div>
-
-<div class="card"><h2><span class="n">7</span>Results snapshot (honest)</h2>
-  <table><tr><th>Evaluation</th><th>AUROC</th><th>PR-AUC</th></tr>
-  <tr><td>Held-out patients, longitudinal LR</td><td>0.65 (0.49-0.77)</td><td>0.33</td></tr>
-  <tr><td>Out-of-bag, all patients (deployed)</td><td>0.63 (0.58-0.68)</td><td>0.27</td></tr>
-  <tr><td>Static vs longitudinal (CV, LR)</td><td>0.67 vs 0.64</td><td>0.30 vs 0.26</td></tr>
-  <tr><td>Chance</td><td>0.50</td><td>0.17</td></tr></table>
-  <ul><li>Signal is <b>modest</b>; history features did <b>not</b> clearly beat current-visit features</li>
-  <li>Calibration after Platt: ECE 0.09 &rarr; 0.03 (held-out)</li></ul></div>
-
-<div class="card"><h2><span class="n">8</span>Contribution (claimed carefully)</h2>
-  <ul><li>Leak-audited, patient-split next-visit pipeline on a public cohort, with tests</li>
-  <li>Direct static-vs-longitudinal comparison with paired patient-level intervals</li>
-  <li>Per-patient out-of-bag prediction, reliability band and trend-level explanation in one app</li>
-  <li><b>Not claimed:</b> first SLE flare model, or that history improves accuracy (not shown here)</li></ul></div>
-
-<div class="card"><h2><span class="n">9</span>App (Streamlit)</h2>
-  <svg viewBox="0 0 420 108" width="100%" height="100">
-    <g font-size="11" text-anchor="middle">
-    <rect x="4" y="6" width="96" height="30" rx="5" fill="#eef4ff" stroke="#9db9ee"/><text x="52" y="25">Pick patient ID</text>
-    <rect x="162" y="6" width="96" height="30" rx="5" fill="#eef4ff" stroke="#9db9ee"/><text x="210" y="25">Pick visit t</text>
-    <rect x="320" y="6" width="96" height="30" rx="5" fill="#fff6e8" stroke="#f0c987"/><text x="368" y="19">Hide records</text><text x="368" y="31">after t</text>
-    <rect x="4" y="68" width="96" height="30" rx="5" fill="#e9f8f1" stroke="#9fd8bf"/><text x="52" y="87">History + trends</text>
-    <rect x="162" y="68" width="96" height="30" rx="5" fill="#e9f8f1" stroke="#9fd8bf"/><text x="210" y="81">Risk + band +</text><text x="210" y="93">reliability</text>
-    <rect x="320" y="68" width="96" height="30" rx="5" fill="#e9f8f1" stroke="#9fd8bf"/><text x="368" y="81">SHAP drivers +</text><text x="368" y="93">caveat</text></g>
-    <g stroke="#9aa5b4" stroke-width="1.5" fill="none"><path d="M100 21H162M258 21H320M368 36V52H52V68M368 52H210V68M368 52H368V68"/></g>
-  </svg>
-  <ul><li>&lt;2 records &rarr; clear "insufficient history" message</li><li>Future records are never shown as known (hindsight only behind a labelled toggle)</li></ul></div>
-
-</div>
-
-<div class="strip"><h2>Workflow</h2>
-<div class="flow">
- <div class="step"><b>Raw GEO file</b>GSE65391 series matrix</div><div class="arrow">&rarr;</div>
- <div class="step"><b>Clean visits</b>SLE only, drop replicates</div><div class="arrow">&rarr;</div>
- <div class="step"><b>Sort in time</b>by patient ID + time</div><div class="arrow">&rarr;</div>
- <div class="step"><b>Features(t)</b>visits &le; t only</div><div class="arrow">&rarr;</div>
- <div class="step"><b>Target(t+1)</b>SLEDAI rise &ge; 4</div><div class="arrow">&rarr;</div>
- <div class="step s2"><b>Split by patient</b>train / held-out</div><div class="arrow">&rarr;</div>
- <div class="step s2"><b>Compare models</b>static vs longitudinal</div><div class="arrow">&rarr;</div>
- <div class="step s2"><b>Calibrate</b>Platt + threshold</div><div class="arrow">&rarr;</div>
- <div class="step s3"><b>Bootstrap ensemble</b>60 models, OOB</div><div class="arrow">&rarr;</div>
- <div class="step s3"><b>Streamlit app</b>risk + SHAP + limits</div>
-</div></div>
-</div></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Paper and Proposed frameworks - architecture</title><style>
+*{box-sizing:border-box}body{margin:0;background:#f8faf9;color:#203938;font:15px/1.65 system-ui,sans-serif}
+main{max-width:1520px;margin:auto;padding:40px}h1{font-size:36px;line-height:1.1;letter-spacing:-1px;margin:0 0 12px}
+.intro{color:#536868;margin:0 0 28px}h2{font-size:20px;line-height:1.3;margin:0 0 8px}h3{font-size:14px;line-height:1.35;margin:0 0 8px}
+.rail{border:1px solid #cddbd8;border-radius:12px;background:#eaf1f1;padding:20px;margin-bottom:20px}.proposed{background:#e5f3ee}
+.caption{font-size:13px;color:#536868;margin:0 0 20px}.flow{display:flex;gap:17px}.box{position:relative;flex:1;background:white;border:1px solid #cddbd8;border-radius:6px;padding:14px 12px}
+.box p{font-size:12px;line-height:1.5;margin:0}.box:not(:last-child):after{content:'→';position:absolute;right:-17px;top:42%;width:17px;text-align:center;color:#177c70}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}.card{background:white;border:1px solid #cddbd8;border-radius:10px;padding:20px}.card p{color:#536868;margin-bottom:0;font-size:14px}
+footer{margin-top:28px;border-top:1px solid #cddbd8;padding-top:16px;color:#536868;font-size:13px}a{color:#177c70}
+@media(max-width:1050px){main{padding:24px}.flow{flex-direction:column}.box:not(:last-child):after{content:'↓';top:auto;bottom:-20px;right:50%}.cards{grid-template-columns:1fr}}
+@media print{@page{size:A3 landscape;margin:12mm}main{padding:0}body{font-size:12px}h1{font-size:28px}.rail{break-inside:avoid}.cards{gap:12px}.card{padding:14px}a{color:inherit;text-decoration:none}}
+</style></head><body><main><h1>Two frameworks. One shared backbone.</h1>
+<p class="intro">Paper-inspired graph / temporal learning, extended with Temporal Residual Boosting (TRB).</p>
+<section class="rail"><h2>1 &nbsp; Paper framework - local implementation</h2>
+<p class="caption">Shared backbone for both methods. Training-only transforms and graph construction; future visits excluded.</p><div class="flow"><div class="box"><h3>Available visits</h3><p>Values + observation masks<br>Recorded time gaps<br>Public V=29; simulated V=52</p></div><div class="box"><h3>Fixed graph + R-GCN</h3><p>Two layers, node width 32<br>Latent code: 32 + 16<br>Observation-mask / input skip</p></div><div class="box"><h3>MRTF</h3><p>Past-only rolling windows<br>1 / 3 / 6 visits<br>Gated fusion to width 64</p></div><div class="box"><h3>Temporal Transformer</h3><p>Two layers, four heads<br>Past-only attention + gaps<br>Temporal embedding h_t:64</p></div><div class="box"><h3>Factual path + heads</h3><p>Noise / treatment-action path<br>Flare + severity mixture<br>Three Gaussian components</p></div><div class="box"><h3>Paper output</h3><p>Deterministic prediction<br>Validation Platt calibration<br>Flare probability + severity</p></div></div></section><section class="rail proposed"><h2>2 &nbsp; Proposed framework - the additional stage</h2><p class="caption">The complete predictor gains explicit history inputs and a second fitting stage; neural weights stay shared.</p><div class="flow"><div class="box"><h3>Reuse the Paper network</h3><p>Same frozen neural weights<br>Paper margin / severity starting point<br>Temporal embedding h_t</p></div><div class="box"><h3>Add observed history</h3><p>Nine past-only groups per variable<br>Plus gap and h_t: 9V + 65 inputs<br>326 public / 533 main simulation</p></div><div class="box"><h3>Temporal Residual Boosting</h3><p>Classification with Paper base margin<br>Regression on severity residuals<br>Validation selects settings / strengths</p></div><div class="box"><h3>Proposed output</h3><p>sigmoid(ell_P + alpha * delta)<br>clip(s_P + beta * residual, 0, 4)<br>One proposed framework, two task heads</p></div></div></section><div class="cards"><section class="card"><h2>Why add the correction?</h2><p>Compression can leave useful measurements and trends insufficiently expressed. TRB sees current values, missingness, running / recent history, changes, rates and observation age. It learns nonlinear corrections without replacing R-GCN, MRTF or the TCT. XGBoost is established; the contribution is this temporal integration.</p></section><section class="card"><h2>How the methodology changes</h2><p>Stage 1: fit the shared neural model with validation early stopping. Stage 2: freeze it and fit correction heads on training patients. Validation selects settings and correction strengths; test patients only score the final pair. Neural seed 73 and split seed 42 are frozen defaults. No future outcome is a prediction input.</p></section><section class="card"><h2>How to interpret the evidence</h2><p>Current scores and gains are generated in docs/MEASURED_RESULTS.md and its JSON snapshot. Read all metrics and bootstrap intervals, including unfavorable changes. The authors&#x27; original clinical cohort is unavailable. Local gains do not prove superiority on that cohort, universal improvement, identified treatment effects or clinical validity.</p></section></div><footer><p>Source: Sharma &amp; Kaur (2025), <i>IEEE Access</i> 13, 150010-150027.
+<a href="https://doi.org/10.1109/ACCESS.2025.3598276">DOI</a> · <a href="paper/reference.pdf">Supplied paper</a>.</p>
+<p>LECG is disabled in both active backbones. The two correction heads belong to one Proposed framework.</p>
+<p><a href="METHODOLOGY.md">Methodology and equations</a> · <a href="CAUSAL_MODEL.md">Implementation mapping</a> ·
+<a href="MEASURED_RESULTS.md">Latest measured improvement</a> · <a href="architecture_sheet.pdf">PDF</a></p>
+<p>Academic research prototype. Architecture alone does not establish causal identification or clinical validity.</p></footer></main></body></html>

@@ -9,6 +9,20 @@ The project predicts **next-visit disease flare** and **disease severity**, comp
 
 **New user?** Follow [Download, install and run](#-download-install-and-run) first, then [Use the application](#-use-the-application-step-by-step). Only **Paper framework** and **Proposed framework** appear in the active comparison.
 
+## 📚 Paper, architecture and improvement documentation
+
+| Guide | What it explains |
+|---|---|
+| [Methodology](docs/METHODOLOGY.md) | What the paper studies, its architecture and training, what TRB adds, correction equations and paired evaluation. |
+| [Architecture](docs/CAUSAL_MODEL.md) | Active blocks, tensor dimensions, code locations and differences from the publication. |
+| [Measured results](docs/MEASURED_RESULTS.md) | Every current score, absolute gain, error reduction, unfavorable change and confidence interval. Generated from verified runs. |
+| [Architecture sheet](docs/architecture_sheet.html) | Visual summary of the two frameworks; also available as [PDF](docs/architecture_sheet.pdf) and [PNG](docs/architecture_sheet.png). |
+| [Implementation audit](docs/PROJECT_AUDIT.md) | Leakage controls, evidence limits and remaining validation work. |
+
+The detailed result document and [JSON snapshot](docs/results/current_comparison.json) update with completed preparation, together with the result blocks below and in the methodology. To refresh these documents from existing artifacts without training or opening the app, run `uv run python -m src.project.reporting`.
+
+The architecture sheet's editable source is [`scripts/build_architecture_sheet.py`](scripts/build_architecture_sheet.py). Its optional authoring command is `uv run --with reportlab python scripts/build_architecture_sheet.py`, which rebuilds HTML and PDF. Render the PDF preview with Poppler: `pdftoppm -scale-to 2200 -singlefile -png docs/architecture_sheet.pdf docs/architecture_sheet`. ReportLab and Poppler are documentation-authoring tools; they are not needed for a normal app launch.
+
 ---
 
 ## ⚖️ The two methods
@@ -324,9 +338,7 @@ All metrics, bars and curves read the latest completed run. The page automatical
 
 - Exactly two comparison rows and chart bars: **Paper framework** and **Proposed framework**, evaluated on the same patients.
 - The original publication is available as an optional historical reference on the second page; its fixed scores are excluded from the main run comparison.
-- Original paper figures, including attention, uncertainty, ROC curves, latent representations and ablations.
 - The LSTM, Transformer, VRNN and clinical-baseline tables are excluded from the active comparison.
-- Source-paper download and attribution.
 
 ### 2. Proposed framework
 
@@ -334,6 +346,7 @@ All metrics, bars and curves read the latest completed run. The page automatical
 - Both methods’ measured scores on the same held-out patients.
 - ROC, precision–recall, calibration, confusion matrices, training curves and severity errors.
 - Patient timelines and actual outcomes beside both predictions.
+- Historical-source expander with original paper figures, source-paper download and attribution; these are separate from measured local curves.
 
 ### 3. 3D embedding explorer
 
